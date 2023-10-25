@@ -1,11 +1,22 @@
+import { useState } from "react";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
+import {
+  EmbeddedCheckout,
+  EmbeddedCheckoutProvider,
+} from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import AuthSDK, { AuthSDKTypes } from "auth-sdk";
 import { ButtonLink, SEO, UnstyledLink } from "core-next-components";
 import Button from "core-ui/Button";
 import { Input } from "forms";
+import PaymentsSDK from "payments-sdk";
 import ApiSDK from "server-sdk";
+
+const stripePromise = loadStripe(
+  "pk_test_51LDrziDYlUJcolVEEj5CM85Bhe4FqEQYsezSvUDeHugx3V9BxOUFv1I1c8MclfJNGgfRSKFvMn4NqT5QX6e8I3lc00a36uUrrK"
+);
 
 // !STARTERCONF -> Select !STARTERCONF and CMD + SHIFT + F
 // Before you begin editing, follow all comments with `STARTERCONF`,
@@ -14,6 +25,7 @@ import { useRouter } from "next/router";
 
 const api = new ApiSDK();
 const authSDK = new AuthSDK(api);
+const paymentsSDK = new PaymentsSDK(api);
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -31,16 +43,50 @@ export default function HomePage() {
   ) => {
     authSDK.signUpClassic({ body });
   };
-  const onSubmitSignIn: SubmitHandler<AuthSDKTypes["SignInClassicBodyType"]> = (
-    body
-  ) => {
-    authSDK.signInClassic({ body });
+  const onSubmitSignIn: SubmitHandler<
+    AuthSDKTypes["SignInClassicBodyType"]
+  > = async (body) => {
+    await authSDK.signInClassic({ body });
+    // Create a Checkout Session as soon as the page loads
+    paymentsSDK
+      .addCreateCheckoutSession({
+        body: {
+          orderId: "Order_ID_example",
+          lineItems: [
+            {
+              productName: "product name 01",
+              price: 10500,
+              quantity: 3,
+            },
+            {
+              productName: "product name 02",
+              price: 3500,
+              quantity: 2,
+            },
+          ],
+        },
+      })
+      .then((data) => {
+        setClientSecret(data.clientSecret);
+      });
   };
+
+  const [clientSecret, setClientSecret] = useState("");
 
   return (
     <>
       <SEO />
       <main>
+        <div id="checkout">
+          {clientSecret && (
+            <EmbeddedCheckoutProvider
+              stripe={stripePromise}
+              options={{ clientSecret }}
+            >
+              <EmbeddedCheckout />
+            </EmbeddedCheckoutProvider>
+          )}
+        </div>
         <section className=" bg-primary-50 ">
           <div
             className="

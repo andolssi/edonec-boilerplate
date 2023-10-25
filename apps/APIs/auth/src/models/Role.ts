@@ -18,13 +18,13 @@ const schema = new Schema<RoleType, RoleModel>(
       {
         ressource: {
           type: String,
-          required: true,
+          required: false,
           enum: ACCESS_RESSOURCES,
         },
         privileges: {
           type: Number,
           enum: PRIVILEGE,
-          required: true,
+          required: false,
         },
         meta: {
           type: Schema.Types.Mixed,

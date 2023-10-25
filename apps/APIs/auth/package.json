@@ -5,7 +5,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "nodemon src/index.ts",
+    "start": "dotenv -- nodemon src/index.ts",
     "start:prod": "node build/index.js",
     "clean": "rimraf build && node ./scripts/postbuild.js",
     "prebuild": "yarn clean && node ./scripts/prebuild.js",

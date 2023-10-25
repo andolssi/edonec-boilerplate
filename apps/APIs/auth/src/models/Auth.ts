@@ -65,17 +65,17 @@ const schema = new Schema<AuthType, AuthModel>(
     sessions: [String],
     role: {
       _id: Schema.Types.ObjectId,
-      name: { type: String, required: true },
+      name: { type: String, required: false },
       access: [
         {
           ressource: {
             type: String,
-            required: true,
+            required: false,
           },
           privileges: {
             type: Number,
             enum: PRIVILEGE,
-            required: true,
+            required: false,
           },
           meta: {
             type: Schema.Types.Mixed,
@@ -87,7 +87,7 @@ const schema = new Schema<AuthType, AuthModel>(
     customAccessList: {
       type: [
         {
-          ressource: { type: String, enum: ACCESS_RESSOURCES, required: true },
+          ressource: { type: String, enum: ACCESS_RESSOURCES, required: false },
           privileges: {
             type: Number,
             enum: PRIVILEGE,

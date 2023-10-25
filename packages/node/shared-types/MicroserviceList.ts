@@ -7,5 +7,6 @@ export enum MICROSERVICE_LIST {
   "categories" = "categories",
   "og-image-generator" = "og-image",
   "mailing" = "mailing",
+  "payments" = "payments",
   // #MICROSERVICE_LIST
 }
