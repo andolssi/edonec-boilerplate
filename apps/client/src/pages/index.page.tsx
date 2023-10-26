@@ -1,11 +1,11 @@
-import { useState } from "react";
+import React, { useEffect,  useState } from "react";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import {
+  Elements,
   EmbeddedCheckout,
-  EmbeddedCheckoutProvider,
-} from "@stripe/react-stripe-js";
+  EmbeddedCheckoutProvider} from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import AuthSDK, { AuthSDKTypes } from "auth-sdk";
 import { ButtonLink, SEO, UnstyledLink } from "core-next-components";
@@ -14,6 +14,7 @@ import { Input } from "forms";
 import PaymentsSDK from "payments-sdk";
 import ApiSDK from "server-sdk";
 
+
 const stripePromise = loadStripe(
   "pk_test_51LDrziDYlUJcolVEEj5CM85Bhe4FqEQYsezSvUDeHugx3V9BxOUFv1I1c8MclfJNGgfRSKFvMn4NqT5QX6e8I3lc00a36uUrrK"
 );
@@ -21,13 +22,17 @@ const stripePromise = loadStripe(
 // !STARTERCONF -> Select !STARTERCONF and CMD + SHIFT + F
 // Before you begin editing, follow all comments with `STARTERCONF`,
 // to customize the default configuration.
+
 import { useRouter } from "next/router";
+
+import StripeForm from "./StripeForm";
 
 const api = new ApiSDK();
 const authSDK = new AuthSDK(api);
 const paymentsSDK = new PaymentsSDK(api);
 
 export default function HomePage() {
+  
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -73,11 +78,27 @@ export default function HomePage() {
 
   const [clientSecret, setClientSecret] = useState("");
 
+
+  useEffect(() => {
+    // Create PaymentIntent as soon as the page loads
+    paymentsSDK.addCreatePaymentIntent({body:{orderAmount:2000}})
+      .then((data) => setClientSecret(data.clientSecret));
+  }, []);
+
+  const appearance:{theme:"stripe" | "night" | "flat"} = {
+    theme: 'stripe',
+  };
+  const options = {
+    clientSecret,
+    appearance,
+  };
+
   return (
     <>
       <SEO />
       <main>
         <div id="checkout">
+          
           {clientSecret && (
             <EmbeddedCheckoutProvider
               stripe={stripePromise}
@@ -87,6 +108,13 @@ export default function HomePage() {
             </EmbeddedCheckoutProvider>
           )}
         </div>
+        <div className="App">
+      {clientSecret && (
+        <Elements options={options} stripe={stripePromise}>
+          <StripeForm />
+        </Elements>
+      )}
+    </div>
         <section className=" bg-primary-50 ">
           <div
             className="

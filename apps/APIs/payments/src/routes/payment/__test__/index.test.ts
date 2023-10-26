@@ -412,3 +412,25 @@ describe("POST /payment/create-checkout-session", () => {
     });
   });
 });
+
+describe("POST /payment/create-payment-intent", () => {
+  describe("validation tests", () => {
+    it("should respond successfully (1)", async () => {
+      const body = { orderAmount: 420 };
+      const response = await supertest(app)
+        .post(`${baseUrl}/payment/create-payment-intent`)
+        .send(body);
+
+      expect(response.status).toEqual(StatusCodes.Created);
+    });
+
+    it("should throw a validation error (2)", async () => {
+      const body = { orderAmount: "420" };
+      const response = await supertest(app)
+        .post(`${baseUrl}/payment/create-payment-intent`)
+        .send(body);
+
+      expect(response.status).toEqual(StatusCodes["Bad Request"]);
+    });
+  });
+});

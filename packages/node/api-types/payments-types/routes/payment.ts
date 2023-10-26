@@ -80,4 +80,15 @@ export type PaymentRouteTypes = {
       response: string;
     };
   };
+  "/payment/create-payment-intent": {
+    POST: {
+      body: {
+        orderAmount: number;
+      };
+
+      response: {
+        clientSecret: string;
+      };
+    };
+  };
 };

@@ -45,4 +45,10 @@ router.postProtected(ACCESS_RESSOURCES.PUBLIC, PRIVILEGE.READ)(
 
 router.post(`${BASE_ROUTE}/webhook`, paymentController.addWebhook);
 
+router.post(
+  `${BASE_ROUTE}/create-payment-intent`,
+  paymentValidators.addCreatePaymentIntent,
+  paymentController.addCreatePaymentIntent
+);
+
 export default router;

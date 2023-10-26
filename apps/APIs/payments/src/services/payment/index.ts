@@ -205,6 +205,8 @@ export const addCreateCheckoutSession = async (
     },
   });
 
+  console.log("hellow Payment created");
+
   producer.emit.StripePaymentCreated({ payment: newPayment });
 
   return {
@@ -237,6 +239,9 @@ export const addWebhook = async (
   } catch (err) {
     throw new Error(`Webhook Error: ${(err as ErrorType).message}`);
   }
+  console.log("event type >>>>>>>>>>>>>>>>>>>>>>>>>", {
+    eventType: event.type,
+  });
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -295,4 +300,24 @@ export const addWebhook = async (
   }
 
   return event.type;
+};
+
+export const addCreatePaymentIntent = async (orderAmount: number): Promise<
+  PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["response"]
+> => {
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: orderAmount,
+    currency: CURRENCY,
+    // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+    automatic_payment_methods: {
+      enabled: true,
+    },
+  });
+
+  if (!paymentIntent.client_secret) throw new Error("Missing client_secret !!");
+
+
+  return {
+    clientSecret: paymentIntent.client_secret
+  }
 };

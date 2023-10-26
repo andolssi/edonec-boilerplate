@@ -117,3 +117,19 @@ export const addWebhook: IMiddleware<
 
   res.status(StatusCodes.Created).send(response);
 };
+
+export const addCreatePaymentIntent: IMiddleware<
+  Request<
+    unknown,
+    unknown,
+    PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["body"],
+    unknown
+  >,
+  Response<
+    PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["response"]
+  >
+> = async (req, res) => {
+  const response = await paymentService.addCreatePaymentIntent(req.body.orderAmount);
+
+  res.status(StatusCodes.Created).send(response);
+};

@@ -112,6 +112,20 @@ export default class PaymentsSDK extends ServerSDK {
 
     return data;
   }
+
+  public async addCreatePaymentIntent({
+    body,
+  }: {
+    body: PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["body"];
+    query?: never;
+    params?: never;
+  }) {
+    const { data } = await this.api.post<
+      PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["response"]
+    >(`${baseUrl}/payment/create-payment-intent`, body);
+
+    return data;
+  }
 }
 
 export type PaymentsSDKTypes = ServerSDKTypes<PaymentsSDK>;
