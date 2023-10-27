@@ -84,10 +84,12 @@ export type PaymentRouteTypes = {
     POST: {
       body: {
         orderAmount: number;
+        orderId: string;
       };
 
       response: {
         clientSecret: string;
+        paymentId: string;
       };
     };
   };

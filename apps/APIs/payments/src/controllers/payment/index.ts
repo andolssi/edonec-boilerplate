@@ -129,7 +129,15 @@ export const addCreatePaymentIntent: IMiddleware<
     PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["response"]
   >
 > = async (req, res) => {
-  const response = await paymentService.addCreatePaymentIntent(req.body.orderAmount);
+  const authID: string = res.locals.token.decodedToken.payload.authId;
+
+  const { orderAmount, orderId } = req.body;
+
+  const response = await paymentService.addCreatePaymentIntent(
+    orderId,
+    authID,
+    orderAmount
+  );
 
   res.status(StatusCodes.Created).send(response);
 };

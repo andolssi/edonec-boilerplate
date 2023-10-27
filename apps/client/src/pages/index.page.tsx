@@ -1,11 +1,12 @@
-import React, { useEffect,  useState } from "react";
+import React, { useState } from "react";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import {
   Elements,
   EmbeddedCheckout,
-  EmbeddedCheckoutProvider} from "@stripe/react-stripe-js";
+  EmbeddedCheckoutProvider,
+} from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import AuthSDK, { AuthSDKTypes } from "auth-sdk";
 import { ButtonLink, SEO, UnstyledLink } from "core-next-components";
@@ -13,7 +14,6 @@ import Button from "core-ui/Button";
 import { Input } from "forms";
 import PaymentsSDK from "payments-sdk";
 import ApiSDK from "server-sdk";
-
 
 const stripePromise = loadStripe(
   "pk_test_51LDrziDYlUJcolVEEj5CM85Bhe4FqEQYsezSvUDeHugx3V9BxOUFv1I1c8MclfJNGgfRSKFvMn4NqT5QX6e8I3lc00a36uUrrK"
@@ -28,17 +28,18 @@ import { useRouter } from "next/router";
 import StripeForm from "./StripeForm";
 
 const api = new ApiSDK();
-const authSDK = new AuthSDK(api);
 const paymentsSDK = new PaymentsSDK(api);
+const authSDK = new AuthSDK(api);
 
 export default function HomePage() {
-  
   const { t } = useTranslation();
   const router = useRouter();
 
   const changeLanguage = (locale: string) => {
     router.push(router.pathname, router.asPath, { locale });
   };
+
+  const [clientSecret, setClientSecret] = useState("");
 
   const signUpFormMethods = useForm<AuthSDKTypes["SignUpClassicBodyType"]>();
   const signInFormMethods = useForm<AuthSDKTypes["SignInClassicBodyType"]>();
@@ -53,7 +54,11 @@ export default function HomePage() {
   > = async (body) => {
     await authSDK.signInClassic({ body });
     // Create a Checkout Session as soon as the page loads
-    paymentsSDK
+  };
+
+  const embeddedCheckoutHandler = async () => {
+    // Create a Checkout Session as soon as the page loads
+    await paymentsSDK
       .addCreateCheckoutSession({
         body: {
           orderId: "Order_ID_example",
@@ -76,17 +81,17 @@ export default function HomePage() {
       });
   };
 
-  const [clientSecret, setClientSecret] = useState("");
-
-
-  useEffect(() => {
+  const customCheckoutHandler = async () => {
     // Create PaymentIntent as soon as the page loads
-    paymentsSDK.addCreatePaymentIntent({body:{orderAmount:2000}})
+    await paymentsSDK
+      .addCreatePaymentIntent({
+        body: { orderAmount: 2000, orderId: "orderId-custom-payment-flow" },
+      })
       .then((data) => setClientSecret(data.clientSecret));
-  }, []);
+  };
 
-  const appearance:{theme:"stripe" | "night" | "flat"} = {
-    theme: 'stripe',
+  const appearance: { theme: "stripe" | "night" | "flat" } = {
+    theme: "stripe",
   };
   const options = {
     clientSecret,
@@ -98,23 +103,33 @@ export default function HomePage() {
       <SEO />
       <main>
         <div id="checkout">
-          
+          <h3 className="m-5 flex justify-center">Login to Complete Payment</h3>
+          <div className="align-center m-10 flex justify-center">
+            <Button primary className="m-3" onClick={embeddedCheckoutHandler}>
+              start embedded Payment
+            </Button>
+            <Button primary className="m-3" onClick={customCheckoutHandler}>
+              start custom Payment
+            </Button>
+          </div>
+          <div>
+            {clientSecret && (
+              <EmbeddedCheckoutProvider
+                stripe={stripePromise}
+                options={{ clientSecret }}
+              >
+                <EmbeddedCheckout />
+              </EmbeddedCheckoutProvider>
+            )}
+          </div>
+        </div>
+        <div>
           {clientSecret && (
-            <EmbeddedCheckoutProvider
-              stripe={stripePromise}
-              options={{ clientSecret }}
-            >
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
+            <Elements options={options} stripe={stripePromise}>
+              <StripeForm />
+            </Elements>
           )}
         </div>
-        <div className="App">
-      {clientSecret && (
-        <Elements options={options} stripe={stripePromise}>
-          <StripeForm />
-        </Elements>
-      )}
-    </div>
         <section className=" bg-primary-50 ">
           <div
             className="

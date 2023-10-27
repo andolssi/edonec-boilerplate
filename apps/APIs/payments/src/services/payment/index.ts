@@ -20,7 +20,7 @@ export const updateStripePayment = async ({
   status,
   eventName,
 }: {
-  session: Stripe.Charge | Stripe.Checkout.Session;
+  session: Stripe.Charge | Stripe.Checkout.Session | Stripe.PaymentIntent;
   status: PaymentStatus;
   eventName: Stripe.Event.Type;
 }) => {
@@ -267,6 +267,30 @@ export const addWebhook = async (
       break;
     }
 
+    case "payment_intent.succeeded": {
+      const session = event.data.object;
+
+      updateStripePayment({
+        session,
+        status: PaymentStatus.COMPLETED,
+        eventName: "payment_intent.succeeded",
+      });
+
+      break;
+    }
+
+    case "payment_intent.processing": {
+      const session = event.data.object;
+
+      updateStripePayment({
+        session,
+        status: PaymentStatus.PENDING,
+        eventName: "payment_intent.processing",
+      });
+
+      break;
+    }
+
     case "charge.failed": {
       const session = event.data.object;
 
@@ -302,9 +326,21 @@ export const addWebhook = async (
   return event.type;
 };
 
-export const addCreatePaymentIntent = async (orderAmount: number): Promise<
+export const addCreatePaymentIntent = async (
+  orderId: string,
+  authId: string,
+  orderAmount: number
+): Promise<
   PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["response"]
 > => {
+  console.log(
+    "-----------------------addCreatePaymentIntent-----------------------"
+  );
+  console.log({ authId });
+  console.log("----------------------------------------------");
+
+  const customerId = await userStripeId(authId);
+
   const paymentIntent = await stripe.paymentIntents.create({
     amount: orderAmount,
     currency: CURRENCY,
@@ -312,12 +348,36 @@ export const addCreatePaymentIntent = async (orderAmount: number): Promise<
     automatic_payment_methods: {
       enabled: true,
     },
+    customer: customerId,
   });
 
   if (!paymentIntent.client_secret) throw new Error("Missing client_secret !!");
 
+  const newPayment = await Payment.create({
+    authId,
+    amount: orderAmount,
+    currency: CURRENCY,
+    orderId,
+    status: PaymentStatus.INITIATED,
+    paymentHistory: [
+      {
+        status: PaymentStatus.INITIATED,
+        createdAt: new Date(),
+      },
+    ],
+    provider: {
+      name: PaymentProviderEnum.STRIPE,
+      reference: customerId,
+      meta: paymentIntent,
+    },
+  });
+
+  console.log("----------------------------------------------");
+  console.log({ paymentId: newPayment._id.toString(), customerId });
+  console.log("----------------------------------------------");
 
   return {
-    clientSecret: paymentIntent.client_secret
-  }
+    clientSecret: paymentIntent.client_secret,
+    paymentId: newPayment._id.toString(),
+  };
 };

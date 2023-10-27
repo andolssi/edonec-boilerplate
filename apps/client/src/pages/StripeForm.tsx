@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 
 import {
   LinkAuthenticationElement,
@@ -25,6 +25,8 @@ function StripeForm() {
       "payment_intent_client_secret"
     );
 
+    console.log(clientSecret);
+
     if (!clientSecret) {
       return;
     }
@@ -33,27 +35,39 @@ function StripeForm() {
       if (!paymentIntent) throw new Error("paymentIntent ");
 
       switch (paymentIntent.status) {
-        case "succeeded":
+        case "succeeded": {
+          console.log("Payment succeeded!");
           setMessage("Payment succeeded!");
           break;
-        case "processing":
+        }
+        case "processing": {
+          console.log("Your payment is processing.");
           setMessage("Your payment is processing.");
           break;
-        case "requires_payment_method":
+        }
+        case "requires_payment_method": {
+          console.log("Your payment was not successful, please try again.");
           setMessage("Your payment was not successful, please try again.");
           break;
-        default:
+        }
+        default: {
+          console.log("Something went wrong.");
           setMessage("Something went wrong.");
           break;
+        }
       }
     });
   }, [stripe]);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: FormEvent<HTMLInputElement>) => {
     e.preventDefault();
+
+    console.log({ handleSubmitEvent: e });
 
     if (!stripe || !elements) {
       // Stripe.js hasn't yet loaded.
+      console.log("Stripe.js hasn't yet loaded");
+
       // Make sure to disable form submission until Stripe.js has loaded.
       return;
     }
@@ -68,6 +82,8 @@ function StripeForm() {
         receipt_email: email,
       },
     });
+
+    console.log({ paymentError: error });
 
     // This point will only be reached if there is an immediate error when
     // confirming the payment. Otherwise, your customer will be redirected to
@@ -90,7 +106,11 @@ function StripeForm() {
   return (
     <form
       id="payment-form"
-      onSubmit={handleSubmit}
+      onSubmit={
+        handleSubmit as unknown as
+          | React.FormEventHandler<HTMLFormElement>
+          | undefined
+      }
       style={{
         width: "30vw",
         minWidth: "500px",
@@ -104,7 +124,7 @@ function StripeForm() {
       <LinkAuthenticationElement
         id="link-authentication-element"
         onChange={(e) => {
-          console.log(e);
+          console.log({ e });
           setEmail(e.value.email);
         }}
       />
