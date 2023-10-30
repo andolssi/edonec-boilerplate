@@ -113,7 +113,7 @@ export default class PaymentsSDK extends ServerSDK {
     return data;
   }
 
-  public async addCreatePaymentIntent({
+  public async createPaymentIntent({
     body,
   }: {
     body: PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["body"];
@@ -123,6 +123,20 @@ export default class PaymentsSDK extends ServerSDK {
     const { data } = await this.api.post<
       PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["response"]
     >(`${baseUrl}/payment/create-payment-intent`, body);
+
+    return data;
+  }
+
+  public async cancelPaymentIntent({
+    body,
+  }: {
+    body: PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["body"];
+    query?: never;
+    params?: never;
+  }) {
+    const { data } = await this.api.post<
+      PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["response"]
+    >(`${baseUrl}/payment/cancel-payment-intent`, body);
 
     return data;
   }

@@ -24,9 +24,20 @@ export const updateStripePayment = async ({
   status: PaymentStatus;
   eventName: Stripe.Event.Type;
 }) => {
+  console.log({ session });
+
+  let paymentId = '';
+
+  if ((session.id).startsWith('pi_')) {
+    paymentId = session.id;
+  } else if (typeof (session as Stripe.Charge).payment_intent === 'string') {
+    paymentId = (session as Stripe.Charge).payment_intent as string;
+  } else throw new Error(`we may have a problem with the payment intent type ${session.id} || ${(session as Stripe.Charge).payment_intent}`);
+
+
   const paymentUpdated = await Payment.findOneAndUpdate(
     {
-      "provider.reference": session.customer,
+      "provider.reference": paymentId,
     },
     {
       status,
@@ -244,28 +255,28 @@ export const addWebhook = async (
   });
 
   switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object;
+    // case "checkout.session.completed": {
+    //   const session = event.data.object;
 
-      // Save an order in your database, marked as 'awaiting payment'
-      // createOrder(session);
+    //   // Save an order in your database, marked as 'awaiting payment'
+    //   // createOrder(session);
 
-      // Check if the order is paid (for example, from a card payment)
-      //
-      // A delayed notification payment will have an `unpaid` status, as
-      // you're still waiting for funds to be transferred from the customer's
-      // account.
+    //   // Check if the order is paid (for example, from a card payment)
+    //   //
+    //   // A delayed notification payment will have an `unpaid` status, as
+    //   // you're still waiting for funds to be transferred from the customer's
+    //   // account.
 
-      if (session.payment_status === "paid") {
-        updateStripePayment({
-          session,
-          status: PaymentStatus.COMPLETED,
-          eventName: "checkout.session.completed",
-        });
-      }
+    //   if (session.payment_status === "paid") {
+    //     updateStripePayment({
+    //       session,
+    //       status: PaymentStatus.COMPLETED,
+    //       eventName: "checkout.session.completed",
+    //     });
+    //   }
 
-      break;
-    }
+    //   break;
+    // }
 
     case "payment_intent.succeeded": {
       const session = event.data.object;
@@ -313,11 +324,33 @@ export const addWebhook = async (
 
       break;
     }
+    case "payment_intent.canceled": {
+      const paymentIntent = event.data.object;
+
+      const paymentUpdated = await Payment.findOne(
+        {
+          "provider.reference": paymentIntent.id,
+        });
+
+      if (!paymentUpdated)
+        throw new Error(
+          `event: payment_intent.canceled - We are facing an issue when searching for and updating the payment document (findOneAndUpdate)`
+        );
+
+      producer.emit.StripePaymentUpdated({ eventName: "payment_intent.canceled", payment: paymentUpdated });
+
+      break;
+    }
     default: {
+      const session = event.data.object;
+
       // eslint-disable-next-line no-console
       console.log("We Don't handle this event ..............................", {
         event: event.type,
       });
+
+      console.log({ session });
+      console.log('..........................................................................................');
 
       break;
     }
@@ -326,7 +359,7 @@ export const addWebhook = async (
   return event.type;
 };
 
-export const addCreatePaymentIntent = async (
+export const createPaymentIntent = async (
   orderId: string,
   authId: string,
   orderAmount: number
@@ -334,7 +367,7 @@ export const addCreatePaymentIntent = async (
   PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["response"]
 > => {
   console.log(
-    "-----------------------addCreatePaymentIntent-----------------------"
+    "-----------------------createPaymentIntent-----------------------"
   );
   console.log({ authId });
   console.log("----------------------------------------------");
@@ -367,17 +400,33 @@ export const addCreatePaymentIntent = async (
     ],
     provider: {
       name: PaymentProviderEnum.STRIPE,
-      reference: customerId,
+      reference: paymentIntent.id,
       meta: paymentIntent,
     },
   });
 
   console.log("----------------------------------------------");
-  console.log({ paymentId: newPayment._id.toString(), customerId });
+  console.log({
+    paymentId: newPayment._id.toString(),
+    customerId,
+    paymentIntentId: paymentIntent.id,
+  });
   console.log("----------------------------------------------");
 
   return {
     clientSecret: paymentIntent.client_secret,
     paymentId: newPayment._id.toString(),
   };
+};
+
+export const cancelPaymentIntent = async (paymentIntentId: string): Promise<
+  PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["response"]
+> => {
+  const paymentIntent = await stripe.paymentIntents.cancel(paymentIntentId);
+
+
+  if (!paymentIntent || !(paymentIntent.status === 'canceled')) throw new Error("Missing Payment Intent or not canceled !!");
+
+
+  return 'OK'
 };

@@ -33,6 +33,7 @@ connect(
 )
   .then(() => {
     app.listen(port, () => {
+      import("helpers/cron");
       import("events/listeners");
       console.log(`🚀 Server listening at http://localhost:${port}`);
     });

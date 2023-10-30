@@ -118,7 +118,7 @@ export const addWebhook: IMiddleware<
   res.status(StatusCodes.Created).send(response);
 };
 
-export const addCreatePaymentIntent: IMiddleware<
+export const createPaymentIntent: IMiddleware<
   Request<
     unknown,
     unknown,
@@ -133,11 +133,27 @@ export const addCreatePaymentIntent: IMiddleware<
 
   const { orderAmount, orderId } = req.body;
 
-  const response = await paymentService.addCreatePaymentIntent(
+  const response = await paymentService.createPaymentIntent(
     orderId,
     authID,
     orderAmount
   );
+
+  res.status(StatusCodes.Created).send(response);
+};
+
+export const cancelPaymentIntent: IMiddleware<
+  Request<
+    unknown,
+    unknown,
+    PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["body"],
+    unknown
+  >,
+  Response<
+    PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["response"]
+  >
+> = async (req, res) => {
+  const response = await paymentService.cancelPaymentIntent(req.body.paymentIntentId);
 
   res.status(StatusCodes.Created).send(response);
 };

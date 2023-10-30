@@ -434,3 +434,25 @@ describe("POST /payment/create-payment-intent", () => {
     });
   });
 });
+
+describe("POST /payment/cancel-payment-intent", () => {
+  describe("validation tests", () => {
+    it("should respond successfully (1)", async () => {
+      const body = { paymentId: "generated_string" };
+      const response = await supertest(app)
+        .post(`${baseUrl}/payment/cancel-payment-intent`)
+        .send(body);
+
+      expect(response.status).toEqual(StatusCodes.Created);
+    });
+
+    it("should throw a validation error (2)", async () => {
+      const body = { paymentId: 9090909 };
+      const response = await supertest(app)
+        .post(`${baseUrl}/payment/cancel-payment-intent`)
+        .send(body);
+
+      expect(response.status).toEqual(StatusCodes["Bad Request"]);
+    });
+  });
+});

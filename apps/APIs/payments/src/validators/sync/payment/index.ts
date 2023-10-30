@@ -149,7 +149,7 @@ export const addCreateCheckoutSession: IMiddleware<
   return next();
 };
 
-export const addCreatePaymentIntent: IMiddleware<
+export const createPaymentIntent: IMiddleware<
   Request<
     unknown,
     unknown,
@@ -163,6 +163,26 @@ export const addCreatePaymentIntent: IMiddleware<
   const validators = new FieldValidator({ body: req.body });
 
   validators.validate.body.orderAmount.isNumber();
+
+  validators.resolveErrors();
+
+  return next();
+};
+
+export const cancelPaymentIntent: IMiddleware<
+  Request<
+    unknown,
+    unknown,
+    PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["body"],
+    unknown
+  >,
+  Response<
+    PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["response"]
+  >
+> = (req, _, next) => {
+  const validators = new FieldValidator({ body: req.body });
+
+  validators.validate.body.paymentIntentId.isString();
 
   validators.resolveErrors();
 

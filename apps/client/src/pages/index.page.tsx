@@ -2,11 +2,7 @@ import React, { useState } from "react";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import {
-  Elements,
-  EmbeddedCheckout,
-  EmbeddedCheckoutProvider,
-} from "@stripe/react-stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import AuthSDK, { AuthSDKTypes } from "auth-sdk";
 import { ButtonLink, SEO, UnstyledLink } from "core-next-components";
@@ -56,35 +52,14 @@ export default function HomePage() {
     // Create a Checkout Session as soon as the page loads
   };
 
-  const embeddedCheckoutHandler = async () => {
-    // Create a Checkout Session as soon as the page loads
-    await paymentsSDK
-      .addCreateCheckoutSession({
-        body: {
-          orderId: "Order_ID_example",
-          lineItems: [
-            {
-              productName: "product name 01",
-              price: 10500,
-              quantity: 3,
-            },
-            {
-              productName: "product name 02",
-              price: 3500,
-              quantity: 2,
-            },
-          ],
-        },
-      })
-      .then((data) => {
-        setClientSecret(data.clientSecret);
-      });
+  const embeddedCheckoutHandler = () => {
+    router.push("/embedded-payment");
   };
 
   const customCheckoutHandler = async () => {
     // Create PaymentIntent as soon as the page loads
     await paymentsSDK
-      .addCreatePaymentIntent({
+      .createPaymentIntent({
         body: { orderAmount: 2000, orderId: "orderId-custom-payment-flow" },
       })
       .then((data) => setClientSecret(data.clientSecret));
@@ -111,16 +86,6 @@ export default function HomePage() {
             <Button primary className="m-3" onClick={customCheckoutHandler}>
               start custom Payment
             </Button>
-          </div>
-          <div>
-            {clientSecret && (
-              <EmbeddedCheckoutProvider
-                stripe={stripePromise}
-                options={{ clientSecret }}
-              >
-                <EmbeddedCheckout />
-              </EmbeddedCheckoutProvider>
-            )}
           </div>
         </div>
         <div>
