@@ -34,7 +34,7 @@ export type PaymentType = {
   provider: {
     name: PaymentProviderEnum;
     reference: string;
-    meta?: Stripe.Response<Stripe.Checkout.Session>;
+    meta?: Stripe.Checkout.Session | Stripe.PaymentIntent;
   };
 };
 export type PaymentDocument = HydratedDocument<PaymentType>;

@@ -51,10 +51,4 @@ router.postProtected(ACCESS_RESSOURCES.PUBLIC, PRIVILEGE.READ)(
   paymentController.createPaymentIntent
 );
 
-router.post(
-  `${BASE_ROUTE}/cancel-payment-intent`,
-  paymentValidators.cancelPaymentIntent,
-  paymentController.cancelPaymentIntent
-);
-
 export default router;

@@ -5,17 +5,21 @@ import { cancelPaymentIntent } from "services/payment";
 
 scheduleJob("0 * * * * *", async () => {
   const expiredPayment = await Payment.find({
-    status: { $not: { $regex: `${PaymentStatus.EXPIRED}` } },
+    status: {
+      $not: { $regex: `(${PaymentStatus.EXPIRED}|${PaymentStatus.COMPLETED})` },
+    },
+    "provider.reference": { $not: { $regex: "^cs_.*" } },
 
-    createdAt: { $lt: new Date(Date.now() - 1000 * 60 * 60 * 0.0833333) },
+    createdAt: { $lt: new Date(Date.now() - 1000 * 60 * 60 * 0.25) },
   });
 
   expiredPayment.forEach(async (payment) => {
-    payment.paymentHistory.push({ status: PaymentStatus.EXPIRED, createdAt: new Date() });
+    payment.paymentHistory.push({
+      status: PaymentStatus.EXPIRED,
+      createdAt: new Date(),
+    });
     payment.status = PaymentStatus.EXPIRED;
-
-    await payment.save()
-    await cancelPaymentIntent(payment.provider.reference)
+    await payment.save();
+    await cancelPaymentIntent(payment.provider.reference);
   });
 });
-

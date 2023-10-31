@@ -93,13 +93,4 @@ export type PaymentRouteTypes = {
       };
     };
   };
-  "/payment/cancel-payment-intent": {
-    POST: {
-      body: {
-        paymentIntentId: string;
-      };
-
-      response: string;
-    };
-  };
 };

@@ -16,32 +16,21 @@ const HALF_HOUR_IN_SECONDS = 1800;
 const YOUR_DOMAIN = "https://localhost:3000/";
 
 export const updateStripePayment = async ({
-  session,
+  paymentIntent,
   status,
   eventName,
 }: {
-  session: Stripe.Charge | Stripe.Checkout.Session | Stripe.PaymentIntent;
+  paymentIntent: Stripe.Checkout.Session | Stripe.PaymentIntent;
   status: PaymentStatus;
   eventName: Stripe.Event.Type;
 }) => {
-  console.log({ session });
-
-  let paymentId = '';
-
-  if ((session.id).startsWith('pi_')) {
-    paymentId = session.id;
-  } else if (typeof (session as Stripe.Charge).payment_intent === 'string') {
-    paymentId = (session as Stripe.Charge).payment_intent as string;
-  } else throw new Error(`we may have a problem with the payment intent type ${session.id} || ${(session as Stripe.Charge).payment_intent}`);
-
-
   const paymentUpdated = await Payment.findOneAndUpdate(
     {
-      "provider.reference": paymentId,
+      "provider.reference": paymentIntent.id,
     },
     {
       status,
-      "provider.meta": session,
+      "provider.meta": paymentIntent,
       $push: {
         paymentHistory: { status, createdAt: new Date() },
       },
@@ -49,10 +38,13 @@ export const updateStripePayment = async ({
     { returnOriginal: false }
   );
 
-  if (!paymentUpdated)
-    throw new Error(
-      `event: ${eventName} - We are facing an issue when searching for and updating the payment document (findOneAndUpdate)`
+  if (!paymentUpdated) {
+    console.log(
+      `!!!!There is no payment Document with this payment intent Id ${paymentIntent.id} and that ok if this event //${eventName}// is payment Intent succeeded `
     );
+
+    return;
+  }
 
   producer.emit.StripePaymentUpdated({ eventName, payment: paymentUpdated });
 };
@@ -195,8 +187,6 @@ export const addCreateCheckoutSession = async (
     })),
   });
 
-  if (!session.client_secret) throw new Error("Missing checkout URL!!");
-
   const newPayment = await Payment.create({
     authId,
     amount: totalAmount,
@@ -211,12 +201,12 @@ export const addCreateCheckoutSession = async (
     ],
     provider: {
       name: PaymentProviderEnum.STRIPE,
-      reference: customerId,
+      reference: session.id,
       meta: session,
     },
   });
 
-  console.log("hellow Payment created");
+  if (!session.client_secret) throw new Error("Missing checkout URL!!");
 
   producer.emit.StripePaymentCreated({ payment: newPayment });
 
@@ -250,39 +240,37 @@ export const addWebhook = async (
   } catch (err) {
     throw new Error(`Webhook Error: ${(err as ErrorType).message}`);
   }
-  console.log("event type >>>>>>>>>>>>>>>>>>>>>>>>>", {
-    eventType: event.type,
-  });
 
   switch (event.type) {
-    // case "checkout.session.completed": {
-    //   const session = event.data.object;
-
-    //   // Save an order in your database, marked as 'awaiting payment'
-    //   // createOrder(session);
-
-    //   // Check if the order is paid (for example, from a card payment)
-    //   //
-    //   // A delayed notification payment will have an `unpaid` status, as
-    //   // you're still waiting for funds to be transferred from the customer's
-    //   // account.
-
-    //   if (session.payment_status === "paid") {
-    //     updateStripePayment({
-    //       session,
-    //       status: PaymentStatus.COMPLETED,
-    //       eventName: "checkout.session.completed",
-    //     });
-    //   }
-
-    //   break;
-    // }
-
-    case "payment_intent.succeeded": {
+    case "checkout.session.completed": {
       const session = event.data.object;
 
+      if (session.payment_status === "paid") {
+        const status = PaymentStatus.COMPLETED;
+
+        await Payment.findOneAndUpdate(
+          {
+            "provider.reference": session.id,
+          },
+          {
+            status,
+            "provider.meta": session,
+            $push: {
+              paymentHistory: { status, createdAt: new Date() },
+            },
+            "provider.reference": session.payment_intent,
+          }
+        );
+      }
+
+      break;
+    }
+
+    case "payment_intent.succeeded": {
+      const paymentIntent = event.data.object;
+
       updateStripePayment({
-        session,
+        paymentIntent,
         status: PaymentStatus.COMPLETED,
         eventName: "payment_intent.succeeded",
       });
@@ -291,10 +279,10 @@ export const addWebhook = async (
     }
 
     case "payment_intent.processing": {
-      const session = event.data.object;
+      const paymentIntent = event.data.object;
 
       updateStripePayment({
-        session,
+        paymentIntent,
         status: PaymentStatus.PENDING,
         eventName: "payment_intent.processing",
       });
@@ -302,13 +290,13 @@ export const addWebhook = async (
       break;
     }
 
-    case "charge.failed": {
-      const session = event.data.object;
+    case "payment_intent.payment_failed": {
+      const paymentIntent = event.data.object;
 
       updateStripePayment({
-        session,
+        paymentIntent,
         status: PaymentStatus.FAILED,
-        eventName: "charge.failed",
+        eventName: "payment_intent.payment_failed",
       });
 
       break;
@@ -317,7 +305,7 @@ export const addWebhook = async (
       const session = event.data.object;
 
       updateStripePayment({
-        session,
+        paymentIntent: session,
         status: PaymentStatus.EXPIRED,
         eventName: "checkout.session.expired",
       });
@@ -327,30 +315,24 @@ export const addWebhook = async (
     case "payment_intent.canceled": {
       const paymentIntent = event.data.object;
 
-      const paymentUpdated = await Payment.findOne(
-        {
-          "provider.reference": paymentIntent.id,
-        });
+      const paymentUpdated = await Payment.findOne({
+        "provider.reference": paymentIntent.id,
+      });
 
-      if (!paymentUpdated)
-        throw new Error(
-          `event: payment_intent.canceled - We are facing an issue when searching for and updating the payment document (findOneAndUpdate)`
-        );
+      if (!paymentUpdated) break;
 
-      producer.emit.StripePaymentUpdated({ eventName: "payment_intent.canceled", payment: paymentUpdated });
+      producer.emit.StripePaymentUpdated({
+        eventName: "payment_intent.canceled",
+        payment: paymentUpdated,
+      });
 
       break;
     }
     default: {
-      const session = event.data.object;
-
       // eslint-disable-next-line no-console
       console.log("We Don't handle this event ..............................", {
         event: event.type,
       });
-
-      console.log({ session });
-      console.log('..........................................................................................');
 
       break;
     }
@@ -366,12 +348,6 @@ export const createPaymentIntent = async (
 ): Promise<
   PaymentRouteTypes["/payment/create-payment-intent"]["POST"]["response"]
 > => {
-  console.log(
-    "-----------------------createPaymentIntent-----------------------"
-  );
-  console.log({ authId });
-  console.log("----------------------------------------------");
-
   const customerId = await userStripeId(authId);
 
   const paymentIntent = await stripe.paymentIntents.create({
@@ -405,28 +381,15 @@ export const createPaymentIntent = async (
     },
   });
 
-  console.log("----------------------------------------------");
-  console.log({
-    paymentId: newPayment._id.toString(),
-    customerId,
-    paymentIntentId: paymentIntent.id,
-  });
-  console.log("----------------------------------------------");
-
   return {
     clientSecret: paymentIntent.client_secret,
     paymentId: newPayment._id.toString(),
   };
 };
 
-export const cancelPaymentIntent = async (paymentIntentId: string): Promise<
-  PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["response"]
-> => {
+export const cancelPaymentIntent = async (paymentIntentId: string) => {
   const paymentIntent = await stripe.paymentIntents.cancel(paymentIntentId);
 
-
-  if (!paymentIntent || !(paymentIntent.status === 'canceled')) throw new Error("Missing Payment Intent or not canceled !!");
-
-
-  return 'OK'
+  if (!paymentIntent || !(paymentIntent.status === "canceled"))
+    throw new Error("Missing Payment Intent or not canceled !!");
 };

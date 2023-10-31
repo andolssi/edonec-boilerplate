@@ -141,19 +141,3 @@ export const createPaymentIntent: IMiddleware<
 
   res.status(StatusCodes.Created).send(response);
 };
-
-export const cancelPaymentIntent: IMiddleware<
-  Request<
-    unknown,
-    unknown,
-    PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["body"],
-    unknown
-  >,
-  Response<
-    PaymentRouteTypes["/payment/cancel-payment-intent"]["POST"]["response"]
-  >
-> = async (req, res) => {
-  const response = await paymentService.cancelPaymentIntent(req.body.paymentIntentId);
-
-  res.status(StatusCodes.Created).send(response);
-};
