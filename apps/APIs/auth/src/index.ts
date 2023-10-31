@@ -5,7 +5,7 @@ import "dotenv/config";
 import app, { baseUrl } from "./init";
 import router from "./routes";
 
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 4001;
 
 const databaseConfig: ConnectOptions = {
   user: process.env.DATABASE_USER,

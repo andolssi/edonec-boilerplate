@@ -11,4 +11,5 @@ export enum ACCESS_RESSOURCES {
   "BLOGS" = "BLOGS",
   "CATEGORY" = "CATEGORY",
   "USER" = "USER",
+  "PAYMENT" = "PAYMENT",
 }

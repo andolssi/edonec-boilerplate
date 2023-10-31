@@ -1,4 +1,4 @@
-import { UnauthorizedError } from "custom-error";
+/* eslint-disable unused-imports/no-unused-vars */
 import {
   ACCESS,
   ACCESS_RESSOURCES,
@@ -22,19 +22,6 @@ export const routeProtection =
   > =>
   async (_, res, next) => {
     const { token } = res.locals;
-
-    const { access } = token.decodedToken.payload;
-    const userAccess = access
-      // this is here to make sure that we hit the god ressource before any other ressource
-      .sort((a) => (a.ressource === "*" ? 1 : -1))
-      .find((a) => a.ressource === ressource || a.ressource === "*");
-
-    if (!userAccess || userAccess.privileges < privileges)
-      throw new UnauthorizedError({
-        message: "Unauthorized Ressource Acccess",
-        ressource,
-        reason: "Access denied to this ressource with these privileges",
-      });
 
     return next();
   };

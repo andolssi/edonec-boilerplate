@@ -1,11 +1,11 @@
 {
-  "baseUrl": "/is-phonenumber-available",
-  "name": "isPhoneNumberAvailable",
-  "method": "GET",
-  "query": {
-    "phoneNumber": "string"
+  "baseUrl": "/create-payment-intent",
+  "name": "createPaymentIntent",
+  "method": "POST",
+  "body": {
+    "orderAmount": "number"
   },
   "response": {
-    "available": "boolean"
+    "clientSecret": "string"
   }
 }
